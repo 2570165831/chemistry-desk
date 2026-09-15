@@ -8,7 +8,7 @@
 
 ## 为什么是"单文件"
 
-所有数据、样式、脚本、字体（包括公式排版库和三维分子库）都内嵌在这一个 HTML 里：
+所有数据、样式、脚本（包括公式排版库和三维分子库）都内嵌在这一个 HTML 里；中文使用系统字体，不内嵌字体文件：
 
 - **完全离线**：页面不含任何外部引用（无 link、无 @import、无外链 url()），运行时零网络请求。可在浏览器开发者工具的 Network 面板里断开网络后刷新验证：功能不受影响（页脚里的参考链接除外，那些是需要联网的外部链接）。
 - **可携带**：拷到 U 盘、发到微信、丢进任何网盘都行，不会因为对方没装环境而失效
@@ -56,7 +56,7 @@
 - 术语表（151 条）
 - 课程对照
 
-其他：全文搜索、深浅色主题、缩放、打印样式、公式一键复制。
+其他：全文搜索（支持中英文、化学式、俗名、元素符号与拼音，命中处高亮，元素表格子会跟着过滤）、深浅色主题、缩放、打印样式、公式一键复制。
 
 ---
 
@@ -72,34 +72,19 @@
 
 ## 数据来源
 
-所有数据都来自公开来源，**用脚本提取而非手工抄录**，并做了交叉核对：
+数据均取自公开来源，用脚本提取而非手工抄录：
 
-| 内容 | 来源 | 核对方式 |
-|---|---|---|
-| 元素周期表基础数据 | 页面原有数据 + PubChem | 原子量与 IUPAC/CIAAW 值比对 |
-| 三种原子半径、离子半径 | [mendeleev](https://github.com/lmmentel/mendeleev) 1.3.0 | 118 个元素与数据库逐条比对一致 |
-| 天然同位素丰度 | mendeleev 同位素表 | 与 IUPAC 值（经 periodictable 库）比对：270/288 条一致或在不确定度区间内 |
-| 标准生成焓 | CRC Handbook / JANAF（经 [chemicals](https://github.com/CalebBell/chemicals) 整理） | 92 条与原始表逐条比对；6 条另与 NIST WebBook 复核 |
-| GHS 危险分类 | PubChem GHS Classification | 52/59 种试剂有分类；57 种 H 语句全部配中文 |
-| GHS 象形图 | Wikimedia Commons | 9 个图标逐个核对许可字段为公有领域 |
-| 三维分子结构 | PubChem 3D SDF | 21 个结构全部校验坐标完整性 |
-| 红外谱峰位 | NIST Chemistry WebBook 的 MSDC-IR 数据集 | 峰位落在教科书特征区间内 |
-| 化合物物理性质（熔沸点、溶解度、外观、用途等 1177 个字段） | PubChem 汇总的美国政府数据库 + 欧盟法规数据（HSDB、EPA、NIOSH、OSHA、CAMEO、ATSDR、DOE、EU 等） | 逐字段保留原始来源标注，可回溯 |
-| 分子式量算法 | ChemFormula（独立实现） | 20 个式子量完全一致 |
+| 内容 | 来源 |
+|---|---|
+| 元素基础性质 | 原页面数据 + [PubChem](https://pubchem.ncbi.nlm.nih.gov) |
+| 原子半径、离子半径、天然同位素丰度 | [mendeleev](https://github.com/lmmentel/mendeleev) 1.3.0 |
+| 标准生成焓 | CRC Handbook / JANAF（经 [chemicals](https://github.com/CalebBell/chemicals) 整理） |
+| GHS 危险分类、三维分子结构 | PubChem |
+| GHS 象形图 | [Wikimedia Commons](https://commons.wikimedia.org)（公有领域） |
+| 红外吸收峰位 | NIST Chemistry WebBook 的 MSDC-IR 数据集 |
+| 化合物物理性质（熔沸点、溶解度、外观、用途等 1177 个字段） | PubChem 汇总的美国政府数据库与欧盟法规数据（HSDB、EPA、NIOSH、OSHA、CAMEO、ATSDR、DOE、EU 等），逐字段保留来源标注 |
 
-**数据授权说明**：早期版本还内嵌过下列来源的字段，**均已在发布前移除**（共 524 个字段）：
-
-| 移除的来源 | 字段数 | 原因 |
-|---|---|---|
-| Haz-Map | 285 | **第三方所有**（作者 Jay A. Brown），不是美国政府作品；NLM 只是受托托管，该授权协议已于 2019 年前后终止，且未找到允许再分发的声明 |
-| ILO-WHO International Chemical Safety Cards (ICSCs) | 172 | ILO 的开放获取政策只覆盖 2023-05-03 之后发布的出版物；ICSC 属此前出版物，且在其卡片与相关页面上均未见可复制的授权声明 |
-| DrugBank | 21 | 以 CC BY-NC 4.0 分发，含非商业限制 |
-| Human Metabolome Database (HMDB) | 20 | 同上 |
-| Cosmetic Ingredient Review (CIR) | 18 | 报告受版权保护 |
-| Toxin and Toxin Target Database (T3DB) | 7 | 非商业限制 |
-| NORMAN Suspect List Exchange | 1 | 条款未明确 |
-
-**当前保留的来源均已核实**：HSDB（美国国家医学图书馆）、NIOSH、OSHA、EPA CDR、CAMEO Chemicals、ATSDR、PAC Chemical Database (DOE) 为美国联邦机构作品；EU Food Improvement Agents 经查[欧盟委员会法律声明](https://commission.europa.eu/legal-notice_en)确认以 **CC BY 4.0** 授权，允许含商用的再利用。按 NLM 的[数据条款](https://www.nlm.nih.gov/databases/download/terms_and_conditions.html)要求，页面页脚已注明 "Courtesy of the U.S. National Library of Medicine"、说明数据可能非最新版、且不代表 NLM 认可。完整清单与许可全文见 `THIRD-PARTY-NOTICES.md`（**同时内嵌在 HTML 页脚，单独分发那个文件也不会漏许可**）。
+**关于数据授权**：早期版本曾内嵌 Haz-Map、ICSC、DrugBank、HMDB、CIR、T3DB、NORMAN 等来源的字段，因再分发条款含非商业限制、无法核实或授权已终止，已全部移除（合计 524 个字段）。当前保留的来源均可核实：美国政府机构作品，以及经[欧盟委员会法律声明](https://commission.europa.eu/legal-notice_en)确认以 CC BY 4.0 授权的欧盟数据。完整清单、许可依据与许认全文见 `THIRD-PARTY-NOTICES.md`（同时内嵌在 HTML 页脚，单独分发那个 HTML 也不会漏许可）。
 
 **注意**：本工具是学习速查，不是权威数据源。做题时以教材和题目给定数据为准。
 
@@ -119,16 +104,9 @@
 
 ## 已知限制
 
-- 化学方程式配平器对**多原子离子**需要显式写出电荷，例如写 `SO4^2-` 而不是 `SO42-`
-- 部分超重元素没有标准原子量，页面如实留空，不做估算
-- 红外数据是**气相谱**，峰位比液膜/KBr 压片高 20–60 cm⁻¹，使用时请注意相态
-- 7 种低危险试剂（氯化钾、碳酸氢钠等）PubChem 未收录 GHS 分类，页面如实显示"未收录"而不是编一条
-- 数据表中的数值保留位数与来源一致，不同来源末位可能有差异
-
----
-
-## 发布清单
-
-1. 新建仓库，把本目录全部文件上传
-2. 仓库描述建议：`中英双语化学速查 · 单文件离线 · 2.4 MB · 无需安装`
-3. 如需 Release，可直接把 `化学速查桌面_离线版.html` 作为附件上传（单个文件即可使用）
+- 化学方程式配平器对**多原子离子**需要显式写出电荷，例如写 `SO4^2-` 而不是 `SO42-`；左右两边用 `->`、`=` 或前后带空格的 `-` 分隔都行
+- 红外数据是**气相谱**，峰位比液膜/KBr 压片高 20–60 cm⁻¹，使用时注意相态
+- 部分超重元素没有标准原子量，页面如实留空；7 种低危险试剂 PubChem 未收录 GHS 分类，页面显示"未收录"而不是编一条
+- **打印／导出 PDF 只输出当前正在看的那个板块**（不是全部 19 个），要打印别的板块请先切过去
+- 天然同位素丰度中有 9 个值（Ce、Yb、Hf 的若干同位素）与 IUPAC 最新值有 0.001–0.14 个百分点的差异，这些元素的天然丰度本身随样品波动
+- 化学式里元素右下角的个数上限为 999，超出会提示而不是硬算

@@ -470,8 +470,13 @@ function applyZoom(scale){if(!$('grid').offsetHeight)return;$('grid').style.tran
 function fitGrid(){const box=$('grid').closest('.periodscroll');if(!box.clientWidth)return;const available=box.clientWidth-6;applyZoom(Math.max(.15,Math.min(2.5,available/1250)));box.scrollLeft=0;}
 $('fitWidth').onclick=()=>{autoFit=true;fitGrid()};$('actualSize').onclick=()=>{autoFit=false;applyZoom(1)};
 new ResizeObserver(()=>{if(autoFit)requestAnimationFrame(fitGrid)}).observe($('grid').closest('.periodscroll'));
+function stripTones(x){
+ /* 先把 ü 家族整体换成 v（中文输入法里 lü/nü 常打成 lv/nv），再去声调 */
+ const t=String(x||'').replace(/[üǖǘǚǜ]/g,'v');
+ const d=t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+ return d+' '+d.replace(/v/g,'u')}
 function render(){let q=norm($('search').value),cv=$('category').value,ov=$('oxidation').value,ch=$('charge').value;const nq=/^[+-]\d+$/.test(q)?Number(q):null;const exact=elements.find(e=>norm(e.s)===q);let ec=0;
-for(const e of elements){let searchtext=norm([e.cn,e.en,...e.aliasesCN,...e.aliasesEN,e.py,e.s,e.z,...cats[e.cat].slice(0,2),e.ox.length?'多价 variable oxidation':'',e.cat==='noble'?'惰性 inert':''].join(' '));let match=(!q||(nq!==null?e.ox.includes(nq):/^\d+$/.test(q)?e.z===Number(q):exact?e.z===exact.z:searchtext.includes(q)))&&(!cv||e.cat===cv)&&(!ov||e.ox.includes(Number(ov)))&&(!multi||e.ox.length>1);$('e'+e.z).classList.toggle('dim',!match);$('e'+e.z).dataset.match=match;if(match)ec++;}
+for(const e of elements){let searchtext=norm([e.cn,e.en,...e.aliasesCN,...e.aliasesEN,e.py,stripTones(e.py),e.s,e.z,...cats[e.cat].slice(0,2),e.ox.length?'多价 variable oxidation':'',e.cat==='noble'?'惰性 inert':''].join(' '));let match=(!q||(nq!==null?e.ox.includes(nq):/^\d+$/.test(q)?e.z===Number(q):exact?(e.z===exact.z||searchtext.includes(q)):searchtext.includes(q)))&&(!cv||e.cat===cv)&&(!ov||e.ox.includes(Number(ov)))&&(!multi||e.ox.length>1);$('e'+e.z).classList.toggle('dim',!match);$('e'+e.z).dataset.match=match;if(match)ec++;}
 let matched=ions.filter(i=>(!ch||i.q===Number(ch))&&(!q||(nq!==null?i.q===nq:norm([i.cn,i.en,i.alias,i.f,i.f+chargeText(i.q),'离子团 团子 polyatomic ion',i.q>0?'阳离子 cation':'阴离子 anion'].join(' ')).includes(q))));
 $('ions').innerHTML=matched.map(i=>`<button class="ion" data-ion="${i.id}" aria-label="${i.cn} ${i.en} ${i.f} 电荷 ${signed(i.q)}"><span class="charge">${chargeText(i.q)}</span><span class="formula">${ionFormula(i)}</span><b>${i.cn}</b><span class="en">${i.en}</span></button>`).join('');$('ionCount').textContent=matched.length+' ions';
 const mr=rules.filter(r=>!q||norm(r.join(' ')).includes(q));$('rules').innerHTML=mr.map(r=>`<article class="rule"><h3>${r[0]}</h3><p>${r[1]}</p><p class="english">${r[2]}</p></article>`).join('');
@@ -603,7 +608,7 @@ const compoundLibrary={"sodium chloride":{"formula":"NaCl","name":"sodium chlori
 function compoundAtomCounts(f){
  f=String(f).replace(/\((?:aq|g|l|s)\)$/,'').replace(/[−+]$/,'');
  const total={};for(let part of f.split(/[·.]/)){const coefficient=part.match(/^\d+/),factor=coefficient?Number(coefficient[0]):1;if(coefficient)part=part.slice(coefficient[0].length);const tokens=part.match(/[A-Z][a-z]?|\d+|[()]/g);if(!tokens||tokens.join('')!==part)return null;const stack=[{}];
- for(let i=0;i<tokens.length;){let t=tokens[i++],bag;if(t==='('){stack.push({});continue}if(t===')'){if(stack.length<2)return null;bag=stack.pop()}else{if(!elements.some(e=>e.s===t))return null;bag={[t]:1}}let n=/^\d+$/.test(tokens[i]||'')?Number(tokens[i++]):1;if(n<1)return null;for(const [k,v] of Object.entries(bag))stack[stack.length-1][k]=(stack[stack.length-1][k]||0)+v*n}
+ for(let i=0;i<tokens.length;){let t=tokens[i++],bag;if(t==='('){stack.push({});continue}if(t===')'){if(stack.length<2)return null;bag=stack.pop()}else{if(!elements.some(e=>e.s===t))return null;bag={[t]:1}}let n=/^\d+$/.test(tokens[i]||'')?Number(tokens[i++]):1;if(n<1||n>999)return null;   /* 个数上限：正常化学式不会出现四位数 */for(const [k,v] of Object.entries(bag))stack[stack.length-1][k]=(stack[stack.length-1][k]||0)+v*n}
  if(stack.length!==1)return null;for(const [k,v]of Object.entries(stack[0]))total[k]=(total[k]||0)+factor*v;}return total;
 }
 const commonCompoundCN={Mn2O3:'三氧化二锰',MnO2:'二氧化锰',H2:'氢',N2:'氮',O2:'氧',F2:'氟',Cl2:'氯',Br2:'溴',I2:'碘',O3:'臭氧',P4:'四磷',S8:'八硫',H2O:'水',NH3:'氨',CO:'一氧化碳',CO2:'二氧化碳',N2O:'一氧化二氮',NO:'一氧化氮',NO2:'二氧化氮',N2O3:'三氧化二氮',N2O4:'四氧化二氮',N2O5:'五氧化二氮',SO2:'二氧化硫',SO3:'三氧化硫',SF6:'六氟化硫',PCl5:'五氯化磷',CCl4:'四氯化碳',HNO3:'硝酸',HNO2:'亚硝酸',H2SO4:'硫酸',H2SO3:'亚硫酸',H3PO4:'磷酸',HClO4:'高氯酸','HCl(aq)':'盐酸','HCl(g)':'氯化氢','HBr(aq)':'氢溴酸','CuSO4·5H2O':'五水合硫酸铜','MgSO4·7H2O':'七水合硫酸镁'};
@@ -1381,15 +1386,38 @@ $('calcBody').innerHTML='<div class="calcgrid">'+
 function numOf(id){const el=$(id);if(!el||el.value==='')return null;const v=Number(el.value);return Number.isFinite(v)?v:null}
 function sig(x,d){if(!Number.isFinite(x))return '—';if(x===0)return '0';const a=Math.abs(x);if(a>=1e-3&&a<1e5)return String(Number(x.toFixed(d)));return x.toExponential(2)}
 function calcFormula(){
- const f=$('cfIn').value.trim(),out=$('cfOut');
+ let f=$('cfIn').value.trim();const out=$('cfOut');
  if(!f){out.innerHTML='输入一个化学式';return}
- const counts=compoundAtomCounts(f);
- if(!counts){out.innerHTML='<p>这个式子暂时解析不了。支持元素符号、括号和 · 结晶水，例如 <b>Ca(NO3)2</b>、<b>CuSO4·5H2O</b>。</p>';return}
+ const bigNum=f.match(/\d{4,}/);
+ if(bigNum){
+  out.innerHTML='<p>数字太大了：<b>'+esc(bigNum[0].slice(0,12)+(bigNum[0].length>12?'…':''))+'</b>。化学式里元素右下角的个数一般不超过三位数，最长的一串大概是多按了键。</p><p class="muted">如果确实要算大分子，可以拆成最简式再乘系数，例如 (C2H4)1000 就先用 C2H4 算，再乘 1000。</p>';
+  return}
+ let counts=compoundAtomCounts(f),caseNote='';
+ if(!counts){
+  /* 全小写输入：化学式区分大小写（Co 是钴、CO 是一氧化碳），先按元素表还原 */
+  const cands=(window.restoreFormulaCase?window.restoreFormulaCase(f):[]).filter(c=>compoundAtomCounts(c))
+   .map(c=>({c,score:(function(){try{
+     const hits=Object.keys(compoundLibrary||{}).filter(k=>{const e=compoundLibrary[k];if(!e||!e.formula)return false;
+       const nm=String(e.formula).replace(/\s+/g,'');return nm===c||nm===c.replace(/\[\]/g,'')});
+     if(hits.length)return 0;
+     const cn=(typeof commonCompoundCN!=='undefined'&&commonCompoundCN[c])?1:2;
+     return cn}catch(e){return 3}})()}))
+   .sort((a,b)=>a.score-b.score||a.c.length-b.c.length)
+   .map(x=>x.c);
+  if(cands.length===1){f=cands[0];counts=compoundAtomCounts(f);
+   caseNote='<p class="muted">输入没区分大小写，已按 <b>'+esc(f)+'</b> 识别（元素符号首字母要大写）。</p>'}
+  else if(cands.length>1){
+   out.innerHTML='<p>输入没区分大小写，这几种写法都成立——<b>最可能是第一个</b>，点一个继续：</p><p>'+cands.slice(0,6).map((c,i)=>'<button class="reset caseopt" type="button" data-f="'+esc(c)+'"'+(i===0?' style="font-weight:600"':'')+'>'+esc(c)+(i===0?'（推荐）':'')+'</button>').join(' ')+'</p>';
+   out.querySelectorAll('.caseopt').forEach(b=>{b.onclick=()=>{$('cfIn').value=b.dataset.f;calcFormula()}});
+   return}
+ }
+ if(!counts){out.innerHTML='<p>这个式子暂时解析不了。支持元素符号、括号和 · 结晶水，例如 <b>Ca(NO3)2</b>、<b>CuSO4·5H2O</b>。</p><p class="muted">注意元素符号要区分大小写：<b>Co</b> 是钴、<b>CO</b> 是一氧化碳；全小写时本工具会尝试还原，但有歧义时会让你选。</p>';return}
  let mass=0,valid=true;const rows=[];
+
  for(const s in counts){const n=counts[s],e=elements.find(x=>x.s===s),w=e?Number.parseFloat(e.weight):NaN;
   if(!Number.isFinite(w)){valid=false;rows.push([s,n,null]);continue}
   mass+=n*w;rows.push([s,n,w]);}
- let h='<p><b>摩尔质量 ≈ '+(valid?mass.toFixed(3)+' g/mol':'缺少原子量')+'</b>'+(valid?'（按本页原子量中心值求和）':'')+'</p>';
+ let h=caseNote+'<p><b>摩尔质量 ≈ '+(valid?mass.toFixed(3)+' g/mol':'缺少原子量')+'</b>'+(valid?'（按本页原子量中心值求和）':'')+'</p>';
  h+='<table class="nametable"><thead><tr><th>元素</th><th>个数</th><th>质量贡献</th><th>质量分数</th></tr></thead><tbody>';
  rows.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
  for(const r of rows)h+='<tr><td>'+escH(r[0])+'</td><td>'+r[1]+'</td><td>'+(r[2]===null?'—':(r[1]*r[2]).toFixed(3)+' g/mol')+'</td><td>'+(r[2]===null||!valid?'—':(100*r[1]*r[2]/mass).toFixed(2)+'%')+'</td></tr>';
@@ -2060,8 +2088,17 @@ const isZero=a=>a[0]===0;
 
 /* ---------- 拆物种 ---------- */
 function splitSide(text){
-  const t=String(text).replace(/＋/g,'+').replace(/[⇌=]/g,'->').replace(/→|⟶|->/g,'→');
-  return t;
+  /* 分隔符：键盘能直接打出来的写法优先支持。
+     注意先把长写法替换掉，否则 "=>" 会被 ">" 之类拆坏。 */
+  return String(text)
+    .replace(/＋/g,'+')
+    .replace(/\s*(==>|=>|-->|->|⟹|⇒|➔|➜|⟶|→|⇌|==|=)\s*/g,'→')
+    /* 单个减号只有"两边都有空格"时才算分隔符：
+       MnO4-、Cl-、OH- 这些负电荷是紧贴公式的，不能当分隔符拆掉 */
+    .replace(/(\s)[-](\s)/g,'$1→$2')
+    /* 长短横线（– —）在化学式里不会出现，带不带空格都当分隔符 */
+    .replace(/\s*[–—]\s*/g,'→')
+    .replace(/\s*(生成|得到|变成|转化为)\s*/g,'→');
 }
 function splitSpecies(side){
   /* 逐个“+”试着往后接：能继续解析成同一个物种就当它是电荷（Fe2+），
@@ -2133,14 +2170,27 @@ function nullspace(M,nCols){
 }
 /* ---------- 主流程 ---------- */
 function balance(input){
+  /* 全小写输入：按元素表还原大小写，取第一个能配平的候选（化学本身能消歧） */
+  if(!/[A-Z]/.test(String(input))&&window.restoreEquationCase){
+    for(const c of window.restoreEquationCase(String(input))){
+      if(c===input)continue;
+      const r=balanceRaw(c);
+      if(r&&!r.error){window.__lastCaseFix=c;return r}
+    }
+  }
+  return balanceRaw(input);
+}
+function balanceRaw(input){
   const norm=splitSide(input);
   const parts=norm.split('→');
-  if(parts.length!==2)return {error:'要写成“左边 → 右边”的形式（→ 或 -> 都行）'};
+  if(parts.length!==2)return {error:'没找到左右分隔符。用两个键打出来就行：减号 + 大于号 = -&gt;；用 = 也可以；单个减号前后各留一个空格也行（Fe + O2 - Fe2O3）。也可以点上面的“插入 ->”按钮。'};
   const L=splitSpecies(parts[0]),R=splitSpecies(parts[1]);
   if(!L.length||!R.length)return {error:'有一边是空的'};
   const left=L.map(parseSpecies),right=R.map(parseSpecies);
   const bad=[...left,...right].map((s,i)=>s?null:(i<left.length?L[i]:R[i-left.length])).filter(Boolean);
-  if(bad.length)return {error:'看不懂这个式子：'+bad.map(escH).join('、')+'（支持元素符号、括号、·结晶水，末尾可带电荷如 Fe2+、MnO4-、SO4^2-）'};
+  const bigNum=String(input).match(/\d{4,}/);
+  if(bigNum&&bad.length)return {error:'数字太大了（'+escH(bigNum[0].slice(0,10))+'）：化学计量数不会到四位数，检查一下是不是多按了键'};
+  if(bad.length)return {error:'这几个片段看不懂：'+bad.map(escH).join('、')+'（支持元素符号、括号、·结晶水；电荷写在末尾，如 Fe2+、MnO4-、SO4^2-；左右分隔用 -&gt; 或 =）'};
   const species=left.concat(right);
   const sign=left.map(()=>1).concat(right.map(()=>-1));
   const elems=[];
@@ -2202,13 +2252,21 @@ if(body){
    '<div class="calccard" id="balancerCard"><h3>化学方程式配平</h3>'+
    '<label class="muted">方程式 <input id="balIn" type="text" autocomplete="off" spellcheck="false" placeholder="Fe + O2 -> Fe2O3" style="width:100%"></label>'+
    '<div class="toolrow" style="margin:8px 0 0"><button id="balGo" class="reset" type="button">配平</button>'+
+   '<button id="balArrow" class="reset" type="button" title="在光标处插入分隔符">插入 -&gt;</button>'+
    '<button id="balCopy" class="reset" type="button">复制结果</button></div>'+
-   '<div id="balOut" class="calcresult">输入方程式：用 → 或 -&gt; 分隔左右，加号两边建议留空格（离子如 Fe2+、MnO4- 直接连着写）。</div>'+
+   '<div id="balOut" class="calcresult">输入方程式：左右两边用 <b>-&gt;</b> 隔开（减号 + 大于号两个键），用 <b>=</b> 也行；想用单个 <b>-</b> 的话，前后各留一个空格也可以（<code>Fe + O2 - Fe2O3</code>）。注意 <code>MnO4-</code> 这种负电荷是紧贴公式的，不会被当成分隔符。</div>'+
    '<p class="muted" style="font-size:12px;margin:8px 0 0">试试：'+
     EXAMPLES.map(([eq,note],i)=>'<button class="reset balex" type="button" data-i="'+i+'" title="'+escH(note)+'">'+escH(eq)+'</button>').join(' ')+
    '</p></div>');
   const run=()=>{const v=$('balIn').value.trim();if(!v){$('balOut').innerHTML='输入方程式：用 → 或 -&gt; 分隔左右，加号两边建议留空格。';return}render(v)};
-  $('balGo').onclick=run;
+  if($('balArrow'))$('balArrow').onclick=function(){
+  const el=$('balIn');const st=el.selectionStart??el.value.length,en=el.selectionEnd??st;
+  const before=el.value.slice(0,st),after=el.value.slice(en);
+  const pad=/\s$|^$/.test(before)?'':' ';
+  el.value=before+pad+'-> '+after.replace(/^\s+/,'');
+  el.focus();el.selectionStart=el.selectionEnd=before.length+pad.length+3;
+};
+$('balGo').onclick=run;
   $('balIn').addEventListener('keydown',e=>{if(e.key==='Enter')run()});
   $('balIn').addEventListener('input',()=>{if($('balIn').value.trim().length>2)run()});
   body.querySelectorAll('.balex').forEach(b=>{b.onclick=()=>{const i=Number(b.dataset.i);$('balIn').value=EXAMPLES[i][0];run()}});
@@ -4996,4 +5054,134 @@ window.__irFilter=function(q){
 };
 })();
 </script>
+<script>
+/* ===== 块 Q：化学式大小写还原 =====
+   化学式区分大小写（Co 钴 / CO 一氧化碳、Ni 镍 / NI 无意义），学生常全小写输入。
+   这里按元素表做全量切分：唯一解直接用，多个解交给调用方（列给用户选，或用配平结果消歧）。 */
+(function(){
+'use strict';
+window.restoreFormulaCase=function(f){
+  const src=String(f);
+  if(/[A-Z]/.test(src))return[src];
+  const out=new Set();
+  const walk=(i,acc)=>{
+    if(out.size>24)return;
+    if(i>=src.length){if(acc)out.add(acc);return}
+    const one=src[i],two=src.slice(i,i+2);
+    /* 数字、括号、结晶水点、以及电荷符号都原样带过（电荷写在末尾，如 Fe2+、SO4^2-） */
+    if(/[0-9()\[\]·.^]/.test(one)){walk(i+1,acc+one);return}
+    if(/[+\-]/.test(one)&&i>0){walk(i+1,acc+one);return}
+    if(!/[a-z]/.test(one))return;
+    const e2=elements.find(e=>e.s.toLowerCase()===two);
+    const e1=elements.find(e=>e.s.toLowerCase()===one);
+    if(e2)walk(i+2,acc+e2.s);
+    if(e1)walk(i+1,acc+e1.s);
+  };
+  walk(0,'');
+  return[...out];
+};
+window.restoreEquationCase=function(text){
+  const src=String(text);
+  const run=(parts)=>{
+    let cands=[''];
+    for(const fr of parts){
+      if(/^(\s+|\+|→|⟶|⇌|=|->|=>)$/.test(fr)){cands=cands.map(c=>c+fr);if(cands.length>24)cands=cands.slice(0,24);continue}
+      const opts=window.restoreFormulaCase(fr);
+      if(!opts.length){cands=cands.map(c=>c+fr);continue}
+      const next=[];
+      for(const c of cands)for(const o of opts.slice(0,4)){next.push(c+o);if(next.length>24)break}
+      cands=next;
+    }
+    return cands;
+  };
+  /* 策略一：所有 + 都当分隔符（h2+o2 这种不带空格的写法）
+     策略二：只把带空格的 + 当分隔符（fe2+ + mno4- 这种带电荷的离子式） */
+  const a=run(src.split(/(\s+|\+|→|⟶|⇌|=)/));
+  const b=run(src.split(/(\s+\+\s+|\s*→\s*|\s*⟶\s*|\s*⇌\s*|\s*=\s*)/));
+  const out=[];for(const c of [...a,...b])if(!out.includes(c))out.push(c);
+  return out.slice(0,24);
+};
+})();
+</script>
+<script>
+/* ===== 块 R：搜索结果高亮 =====
+   搜索时把命中的关键词包进 <mark>，让"为什么这个板块会出现"一眼可见。
+   只处理可见板块的文本节点，跳过脚本、样式、公式排版、SVG 与已有标记。 */
+(function(){
+'use strict';
+const SKIP_SEL='script,style,svg,canvas,input,textarea,select,mark,.katex,.katex-display,.katex-mathml,pre,[aria-hidden="true"]';
+const MAX_MARKS=400;
+function clearMarks(){
+ const ms=document.querySelectorAll('mark.hl');
+ for(const m of ms){const t=document.createTextNode(m.textContent);m.parentNode.replaceChild(t,m)}
+}
+function highlight(qRaw){
+ clearMarks();
+ const q=String(qRaw||'').trim();
+ if(q.length<1)return 0;
+ const lower=q.toLowerCase();
+ let count=0;
+ /* 只扫当前可见的板块：19 个板块全扫会拖慢每次按键 */
+ const roots=[...document.querySelectorAll('main section')].filter(x=>!x.hidden);
+ const scope=roots.length?roots:[document.querySelector('main')||document.body];
+ const walker=document.createTreeWalker(scope[0],NodeFilter.SHOW_TEXT,{
+  acceptNode:node=>{
+   if(count>=MAX_MARKS)return NodeFilter.FILTER_REJECT;
+   const p=node.parentElement;
+   if(!p)return NodeFilter.FILTER_REJECT;
+   if(p.closest(SKIP_SEL))return NodeFilter.FILTER_REJECT;
+   if(p.offsetParent===null&&p.tagName!=='DIALOG')return NodeFilter.FILTER_REJECT;   /* 跳过隐藏内容 */
+   return node.nodeValue&&node.nodeValue.toLowerCase().includes(lower)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT;
+  }
+ });
+ const targets=[];
+ for(const root of scope){
+  if(targets.length>=MAX_MARKS)break;
+  const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,walker.filter);
+  while(w.nextNode()){targets.push(w.currentNode);if(targets.length>=MAX_MARKS)break}
+ }
+ for(const node of targets){
+  const text=node.nodeValue,low=text.toLowerCase();
+  let idx=low.indexOf(lower);
+  if(idx<0)continue;
+  const frag=document.createDocumentFragment();
+  let pos=0;
+  while(idx>=0&&count<MAX_MARKS){
+   frag.appendChild(document.createTextNode(text.slice(pos,idx)));
+   const m=document.createElement('mark');
+   m.className='hl';
+   m.textContent=text.slice(idx,idx+q.length);
+   frag.appendChild(m);
+   count++;
+   pos=idx+q.length;
+   idx=low.indexOf(lower,pos);
+  }
+  if(pos<text.length)frag.appendChild(document.createTextNode(text.slice(pos)));
+  node.parentNode.replaceChild(frag,node);
+ }
+ return count;
+}
+/* 样式 */
+document.head.insertAdjacentHTML('beforeend','<style>'+
+ 'mark.hl{background:#ffdf7e;color:#1f2f2f;padding:0 1px;border-radius:2px}'+
+ 'html[data-theme=dark] mark.hl{background:#6f5a17;color:#f3efe2}'+
+ '@media print{mark.hl{background:transparent;text-decoration:underline}}'+
+ '</style>');
+/* 在每次渲染后执行高亮 */
+const prevRender=window.render;
+let hlTimer=null;
+window.render=function(){
+ prevRender();
+ /* 每次按键都重排 DOM 会有 20–50 ms 的卡顿，这里延后 100 ms，打字手感不受影响 */
+ clearTimeout(hlTimer);
+ const q=document.getElementById('search').value;
+ hlTimer=setTimeout(function(){try{highlight(q)}catch(e){}},100);
+};
+/* 首次也可能有查询（例如刷新后浏览器保留的值） */
+setTimeout(function(){try{highlight(document.getElementById('search').value)}catch(e){}},300);
+window.__hlStat=()=>({marks:document.querySelectorAll('mark.hl').length});
+})();
+</script>
+
+
 </html>
