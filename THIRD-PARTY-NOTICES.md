@@ -432,3 +432,8 @@ Apache License
 | [ILO 权利与许可](https://www.ilo.org/rights-and-permissions) | 确认 ICSC 授权状态（据此移除） |
 | [NCBI/NLM 政策](https://www.ncbi.nlm.nih.gov/home/about/policies/) | 确认 PubChem 数据的地位 |
 | [Wikidata Haz-Map 属性提案](https://m.wikidata.org/wiki/Wikidata:Property_proposal/Haz-Map_ID) | 确认 Haz-Map 为第三方所有、NLM 授权已终止（据此移除） |
+
+
+## 五、内嵌名称录音
+
+100 个中文元素名采用 Wikimedia Commons / The Shtooka Project 真人录音，分别保留 CC BY 2.0 France 或 CC BY-SA 3.0 United States 许可。其余名称为 Kokoro 模型生成的合成录音。逐项署名、来源、许可、转换方式与覆盖范围见 [AUDIO-SOURCES.md](AUDIO-SOURCES.md)；同样的真人署名清单已嵌入 HTML 页脚。模型权重不包含在发布文件中。
